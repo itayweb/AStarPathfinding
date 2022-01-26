@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -15,20 +16,25 @@ public enum TileType
 
 public class TilemapSystem : MonoBehaviour
 {
+    // An array of scriptable objects of all tile types
     [SerializeField] private TilemapTile[] tiles;
     [SerializeField] private LayerMask tilemapLayer;
-    [SerializeField] private Tilemap _tilemap;
+    [SerializeField] private Tilemap tilemap;
     [SerializeField] private TMP_InputField widthInputField;
     [SerializeField] private TMP_InputField heightInputField;
     private TileType currentTile;
+    private int widthLen;
+    private int heightLen;
+    private Node[,] gridArray;
     
     void Start()
     {
-        currentTile = TileType.Start;
+        currentTile = TileType.Ground;
     }
     
     void Update()
     {
+        // Detect mouse position and placing the selected tile in the tile map
         PlaceTile();
     }
 
@@ -41,7 +47,7 @@ public class TilemapSystem : MonoBehaviour
             if (hit2D.collider != null)
             {
                 var mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-                var cellPos = _tilemap.WorldToCell(mousePos);
+                var cellPos = tilemap.WorldToCell(mousePos);
                 ChangeTile(cellPos);
             }
         }
@@ -49,18 +55,95 @@ public class TilemapSystem : MonoBehaviour
 
     private void ChangeTile(Vector3Int cellPos)
     {
-        _tilemap.SetTile(cellPos, tiles[(int)currentTile]);
+        if (currentTile == TileType.Start || currentTile == TileType.End)
+        {
+            bool startExist = false;
+            bool endExist = false;
+            Vector3Int oldPos = new Vector3Int(0, 0, 0);
+            for (int x = 0; x < widthLen; x++)
+            {
+                for (int y = 0; y < heightLen; y++)
+                {
+                    if (currentTile == TileType.End)
+                    {
+                        if (tiles[(int) currentTile] == tilemap.GetTile(new Vector3Int(x, y, 0)))
+                        {
+                            endExist = true;
+                            oldPos = new Vector3Int(x, y, 0);
+                            break;
+                        }
+                    }
+                    else if (currentTile == TileType.Start)
+                    {
+                        if (tiles[(int) currentTile] == tilemap.GetTile(new Vector3Int(x, y, 0)))
+                        {
+                            startExist = true;
+                            oldPos = new Vector3Int(x, y, 0);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (cellPos != oldPos && (startExist || endExist))
+            {
+                tilemap.SetTile(cellPos, tiles[(int)currentTile]);
+                tilemap.SetTile(oldPos, tiles[(int)TileType.Ground]);
+            }
+            else
+            {
+                tilemap.SetTile(cellPos, tiles[(int)currentTile]);
+            }
+            gridArray[cellPos.x, cellPos.y] = new Node(true, cellPos.x, cellPos.y);
+        }
+        else if (currentTile == TileType.Obstacle)
+        {
+            tilemap.SetTile(cellPos, tiles[(int)currentTile]);
+            gridArray[cellPos.x, cellPos.y] = new Node(false, cellPos.x, cellPos.y);
+        }
     }
 
+    // Generate the tile map grid according to the width and height input
     public void GenerateGrid()
     {
-        int[,] gridArray = new int[int.Parse(widthInputField.text), int.Parse(heightInputField.text)];
+        gridArray = new Node[int.Parse(widthInputField.text), int.Parse(heightInputField.text)];
         for (int x = 0; x < gridArray.GetLength(0); x++)
         {
             for (int y = 0; y < gridArray.GetLength(1); y++)
             {
-                _tilemap.SetTile(new Vector3Int(x, y, 0), tiles[3]);
+                tilemap.SetTile(new Vector3Int(x, y, 0), tiles[3]);
+                gridArray[x, y] = new Node(true, x, y);
             }
         }
+        widthLen = Int32.Parse(widthInputField.text);
+        heightLen = Int32.Parse(heightInputField.text);
+        widthInputField.text = "";
+        heightInputField.text = "";
+    }
+
+    // Reset the tile map grid
+    public void ResetGrid()
+    {
+        tilemap.ClearAllTiles();
+    }
+
+    public void SelectStartTile()
+    {
+        currentTile = TileType.Start;
+    }
+    
+    public void SelectEndTile()
+    {
+        currentTile = TileType.End;
+    }
+    
+    public void SelectObstacleTile()
+    {
+        currentTile = TileType.Obstacle;
+    }
+    
+    public void SelectGroundTile()
+    {
+        currentTile = TileType.Ground;
     }
 }
