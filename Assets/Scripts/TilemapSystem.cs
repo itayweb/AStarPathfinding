@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -26,6 +27,7 @@ public class TilemapSystem : MonoBehaviour
     private int widthLen;
     private int heightLen;
     private Node[,] gridArray;
+    private Node startNode, endNode;
     
     void Start()
     {
@@ -95,11 +97,20 @@ public class TilemapSystem : MonoBehaviour
                 tilemap.SetTile(cellPos, tiles[(int)currentTile]);
             }
             gridArray[cellPos.x, cellPos.y] = new Node(true, cellPos.x, cellPos.y);
+            if (currentTile == TileType.End)
+                endNode = gridArray[cellPos.x, cellPos.y];
+            else if (currentTile == TileType.Start)
+                startNode = gridArray[cellPos.x, cellPos.y];
         }
         else if (currentTile == TileType.Obstacle)
         {
             tilemap.SetTile(cellPos, tiles[(int)currentTile]);
             gridArray[cellPos.x, cellPos.y] = new Node(false, cellPos.x, cellPos.y);
+        }
+        else
+        {
+            tilemap.SetTile(cellPos, tiles[(int)currentTile]);
+            gridArray[cellPos.x, cellPos.y] = new Node(true, cellPos.x, cellPos.y);
         }
     }
 
@@ -120,13 +131,33 @@ public class TilemapSystem : MonoBehaviour
         widthInputField.text = "";
         heightInputField.text = "";
     }
-
+    
     // Reset the tile map grid
     public void ResetGrid()
     {
         tilemap.ClearAllTiles();
     }
 
+    public void StartAlgorithm()
+    {
+        if (startNode == null || endNode == null)
+            Debug.Log("Start node and End node not placed");
+        else
+        {
+            List<Node> pathList = PathfindingSystem.Instance.FindPath(startNode, endNode, widthLen, heightLen, gridArray);
+            if (pathList == null)
+            {
+                Debug.Log("Path not found!");
+                return;
+            }
+            foreach (var t in pathList)
+            {
+                tilemap.SetTile(new Vector3Int(t.GetX(), t.GetY(), 0), tiles[(int)TileType.Path]);
+            }
+        }
+    }
+
+    #region ChangeCurrentTile
     public void SelectStartTile()
     {
         currentTile = TileType.Start;
@@ -146,4 +177,5 @@ public class TilemapSystem : MonoBehaviour
     {
         currentTile = TileType.Ground;
     }
+    #endregion
 }

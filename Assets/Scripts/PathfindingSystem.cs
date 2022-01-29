@@ -13,39 +13,27 @@ public class PathfindingSystem : MonoBehaviour
             Instance = this;
     }
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-    public void FindPath(Node start, Node end, int width, int height, Node[,] gridArray)
+    public List<Node> FindPath(Node start, Node end, int width, int height, Node[,] gridArray)
     {
         List<Node> openList = new List<Node>() {start};
         List<Node> closeList = new List<Node>();
 
         while (openList.Any())
         {
-            Node current = openList[0];
-            foreach (var node in openList.Where(node => node.GetFCost() <= current.GetFCost() && node.GetHCost() < current.GetHCost()))
-                current = node;
+            Node current = FindLowestFCost(openList);
+            if (current == end)
+                return GetPath(current);
             closeList.Add(current);
             openList.Remove(current);
             current.FindNeighbors(width, height, gridArray);
-            foreach (var neighbor in current.GetNeightbors().Where(neighbor => neighbor.IsWalkable && !closeList.Contains(neighbor)))
+            foreach (var neighbor in current.GetNeightbors().Where(neighbor => neighbor.GetIsWalkable() && !closeList.Contains(neighbor)))
             {
                 bool isNeedSearch = openList.Contains(neighbor);
                 int costToNeighbor = neighbor.GetGCost() + neighbor.GetDistance(end);
                 if (!isNeedSearch || costToNeighbor < neighbor.GetGCost())
                 {
                     neighbor.SetG(costToNeighbor);
-                    neighbor.Parent = current;
+                    neighbor.SetParent(current);
                     if (!isNeedSearch)
                     {
                         neighbor.SetH(neighbor.GetDistance(end));
@@ -54,5 +42,28 @@ public class PathfindingSystem : MonoBehaviour
                 }
             }
         }
+        return null;
+    }
+
+    private Node FindLowestFCost(List<Node> list)
+    {
+        Node lowest = list[0];
+        foreach (var tNode in list)
+        {
+            if (tNode.GetFCost() < lowest.GetFCost())
+                lowest = tNode;
+        }
+        return lowest;
+    }
+
+    private List<Node> GetPath(Node node)
+    {
+        List<Node> list = new List<Node>();
+        while (node != null)
+        {
+            list.Add(node);
+            node = node.GetParent();
+        }
+        return list;
     }
 }
